@@ -26,26 +26,21 @@ var xs = mlx.prepareInput(data),
     ys;
 
 var platno = new Canvas(document.getElementById('view'), w, h);
+var mse = document.getElementById('mse');
+var epo = document.getElementById('epoch');
+var mem = document.getElementById('memory');
 
 var train = () => {
-    mlx.trainWith(trainData, //{
-//            onTrainEnd : (logs) => {
-////                platno.draw(dc, false);
-//                console.log(logs);
-////                return 1;
-//            }
-        //    onBatchEnd : (batch, logs) => {
-        //         console.log(batch, logs);
-        //    },
-        //    onEpochEnd : (ep, lm) => {
-        //        platno.draw(dc, false);
-        //        if (ep % 100 == 0) {
-        //            console.log(ep, lm)
-        //        }
-        //    }
-//        }
-    ).then(e => {
+    mlx.trainWith(trainData, {
+            onEpochEnd : (ep, lm) => {
+                mem.textContent = mlx.tf.memory().numTensors;
+                mse.textContent = lm.mse;
+                epo.textContent = ep;
 
+            }
+        }
+    ).then((e) => {
+//        mse.textContent = "loss: "+e.history.loss[e.history.loss.length-1] + " | meanSquaredError: "+e.history.mse[e.history.mse.length-1];
 //        platno.draw(dc, false);
         setTimeout(train, 10)
     });
@@ -53,8 +48,10 @@ var train = () => {
 
 var dc = async function (ctx) {
     platno.clear("hsla(0, 0%, 0%, 1)");
-
-    ys = mlx.predict(xs).dataSync();
+    ys = mlx.tf.tidy(() => {
+        var tmp = mlx.predict(xs);
+        return tmp.dataSync();
+    });
 //    console.log(data);
     for (var i = 0; i < cols; i++) {
         for (var j = 0; j < rows; j++) {
@@ -64,6 +61,7 @@ var dc = async function (ctx) {
             platno.text(ys[i + cols * j].toFixed(2) , pos.x + res2 - 15, pos.y + res2 + 5, "#FF0000", "15px Tahoma")
         }
     }
+//    mlx.tf.dispose(ys);
     platno.text(platno.fps , 10, 30, "#FFFFFF")
     return 1;
 };
